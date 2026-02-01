@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { FiSend } from 'react-icons/fi';
+import { FiSend, FiMic } from 'react-icons/fi';
+import { HiSparkles } from 'react-icons/hi';
 
 function MessageInput({ onSend, disabled }) {
   const [message, setMessage] = useState('');
@@ -7,16 +8,17 @@ function MessageInput({ onSend, disabled }) {
 
   // Auto-resize textarea
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
     }
   }, [message]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
-      onSend(message.trim());
+      onSend(message);
       setMessage('');
     }
   };
@@ -29,34 +31,54 @@ function MessageInput({ onSend, disabled }) {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pb-6">
-      <form onSubmit={handleSubmit} className="relative">
-        <div className="flex items-end bg-[#2f2f2f] rounded-2xl border border-[#424242] focus-within:border-[#6b6b6b] transition-colors">
+    <div className="relative px-6 pb-6 pt-2">
+      {/* Gradient line above input */}
+      <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-[#8b5cf6]/30 to-transparent"></div>
+
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+        <div className="relative glass-strong rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 focus-within:shadow-lg focus-within:shadow-purple-500/20 focus-within:border-[#8b5cf6]/50">
           <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message AI Assistant..."
+            placeholder="Ask anything... Let's learn together ✨"
             disabled={disabled}
             rows={1}
-            className="flex-1 bg-transparent text-white placeholder-[#8e8e8e] resize-none py-4 px-4 outline-none auto-resize-textarea"
+            className="w-full bg-transparent text-white placeholder:text-[#71717a] py-4 pl-5 pr-28 resize-none focus:outline-none text-sm disabled:opacity-50"
+            style={{ minHeight: '56px', maxHeight: '200px' }}
           />
-          <button
-            type="submit"
-            disabled={!message.trim() || disabled}
-            className={`p-3 m-1.5 rounded-xl transition-all duration-200 ${message.trim() && !disabled
-              ? 'bg-white text-black hover:bg-gray-200'
-              : 'bg-[#424242] text-[#8e8e8e] cursor-not-allowed'
-              }`}
-          >
-            <FiSend size={18} />
-          </button>
+
+          {/* Action Buttons */}
+          <div className="absolute right-3 bottom-3 flex items-center gap-2">
+            {/* Voice Input */}
+            <button
+              type="button"
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-[#71717a] hover:text-[#8b5cf6] hover:bg-white/5 transition-all"
+            >
+              <FiMic size={18} />
+            </button>
+
+            {/* Send Button */}
+            <button
+              type="submit"
+              disabled={disabled || !message.trim()}
+              className="send-button w-10 h-10 disabled:opacity-30 disabled:hover:shadow-none"
+            >
+              <FiSend size={18} className="text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Footer with sparkle */}
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <HiSparkles className="text-[#8b5cf6] text-xs" />
+          <p className="text-[10px] text-[#71717a] tracking-wide">
+            Powered by AI • Explaining your thinking helps you learn better
+          </p>
+          <HiSparkles className="text-[#06b6d4] text-xs" />
         </div>
       </form>
-      <p className="text-center text-xs text-[#8e8e8e] mt-3">
-        Remember: Explaining your thinking helps you learn better!
-      </p>
     </div>
   );
 }

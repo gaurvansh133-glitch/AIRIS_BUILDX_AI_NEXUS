@@ -170,6 +170,6 @@ Remember: Your goal is to create "aha!" moments, not to provide answers. A stude
 
 
 # Create a default agent instance
-def create_agent(model_name: str = "llama2") -> OllamaAgent:
+def create_agent(model_name: str = "phi") -> OllamaAgent:
     """Create an Ollama agent with the specified model."""
     return OllamaAgent(model_name=model_name)

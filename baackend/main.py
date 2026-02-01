@@ -58,8 +58,8 @@ async def startup_event():
     """Initialize the agent on startup."""
     global agent
     try:
-        agent = create_agent(model_name="llama2")
-        print("✅ Agent initialized successfully with llama2 model")
+        agent = create_agent(model_name="phi")
+        print("✅ Agent initialized successfully with phi model")
     except Exception as e:
         print(f"⚠️ Failed to initialize agent: {e}")
         print("Make sure Ollama is running: ollama serve")

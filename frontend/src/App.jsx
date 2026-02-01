@@ -72,7 +72,6 @@ function App() {
 
     // Prepare for assistant response
     let assistantContent = '';
-    const assistantMessage = { role: 'assistant', content: '' };
 
     try {
       await sendMessageStream(
@@ -107,7 +106,7 @@ function App() {
         // onError
         (error) => {
           setIsLoading(false);
-          const errorMessage = { role: 'assistant', content: `Error: ${error}. Make sure the backend server is running.` };
+          const errorMessage = { role: 'assistant', content: `⚠️ Connection error: ${error}. Please ensure the backend is running.` };
           setMessages(prev => [...prev.filter(m => m.role !== 'assistant' || m.content), errorMessage]);
         }
       );
@@ -115,13 +114,28 @@ function App() {
       setIsLoading(false);
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: `Error: ${error.message}. Make sure the backend server is running.` }
+        { role: 'assistant', content: `⚠️ Error: ${error.message}. Please check your connection.` }
       ]);
     }
   }, [messages, isLoading, activeConversationId]);
 
   return (
-    <div className="flex h-screen bg-[#212121]">
+    <div className="relative flex h-screen overflow-hidden">
+      {/* Animated Background Particles */}
+      <div className="particles">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 20}s`,
+              animationDuration: `${15 + Math.random() * 10}s`,
+            }}
+          />
+        ))}
+      </div>
+
       {/* Sidebar */}
       <Sidebar
         conversations={conversations}
@@ -131,10 +145,26 @@ function App() {
       />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative">
         {/* Header */}
-        <header className="h-14 flex items-center justify-center border-b border-[#2f2f2f]">
-          <h1 className="text-lg font-medium">🎓 Learning Guide</h1>
+        <header className="relative h-16 flex items-center justify-between px-6 border-b border-white/5 backdrop-blur-xl bg-[#030014]/50 z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse shadow-lg shadow-green-500/50"></div>
+            <span className="text-sm text-[#a1a1aa]">AI Ready</span>
+          </div>
+
+          <h1 className="absolute left-1/2 -translate-x-1/2 text-lg font-semibold text-gradient">
+            NeoGuide
+          </h1>
+
+          <div className="flex items-center gap-4">
+            <button className="px-4 py-2 rounded-lg text-xs font-medium text-[#a1a1aa] hover:text-white hover:bg-white/5 transition-all">
+              History
+            </button>
+            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#8b5cf6] to-[#06b6d4] text-white text-xs font-semibold hover:opacity-90 transition-opacity">
+              Upgrade
+            </button>
+          </div>
         </header>
 
         {/* Chat Window */}
