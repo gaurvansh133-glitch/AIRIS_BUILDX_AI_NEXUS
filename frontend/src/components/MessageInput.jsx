@@ -4,7 +4,6 @@ export default function MessageInput({ onSend, disabled }) {
   const [message, setMessage] = useState('');
   const textareaRef = useRef(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -36,7 +35,7 @@ export default function MessageInput({ onSend, disabled }) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Message ChatGPT..."
+          placeholder="Ask Cortana anything..."
           className="input-textarea"
           rows={1}
           disabled={disabled}
@@ -52,7 +51,7 @@ export default function MessageInput({ onSend, disabled }) {
         </button>
       </form>
       <div className="input-footer">
-        ChatGPT can make mistakes. Consider checking important information.
+        Cortana guides you to discover answers through Socratic questioning.
       </div>
     </div>
   );

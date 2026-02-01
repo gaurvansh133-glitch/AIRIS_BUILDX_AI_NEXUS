@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import MessageInput from './components/MessageInput';
-import { sendMessageStream } from './api';
+import CodePlayground from './components/CodePlayground';
+import { sendMessageStream, reviewCode } from './api';
 
 function App() {
   const [conversations, setConversations] = useState([]);
@@ -10,7 +11,12 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Create new conversation
+  // Session state for Socratic teaching
+  const [userLevel, setUserLevel] = useState(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showPlayground, setShowPlayground] = useState(false);
+  const [codeFeedback, setCodeFeedback] = useState([]);
+
   const handleNewChat = useCallback(() => {
     const newConv = {
       id: Date.now(),
@@ -20,20 +26,45 @@ function App() {
     setConversations(prev => [newConv, ...prev]);
     setActiveConversationId(newConv.id);
     setMessages([]);
+    setUserLevel(null);
+    setCurrentStep(0);
+    setShowPlayground(false);
+    setCodeFeedback([]);
   }, []);
 
-  // Select conversation
   const handleSelectConversation = useCallback((id) => {
     setActiveConversationId(id);
     const conv = conversations.find(c => c.id === id);
     setMessages(conv?.messages || []);
   }, [conversations]);
 
-  // Send message
+  const handleLevelSelect = useCallback((level) => {
+    setUserLevel(level);
+    // Send level selection as a message
+    handleSend(`I'm at the ${level} level.`);
+  }, []);
+
+  const handleCodeSubmit = useCallback(async (code) => {
+    setIsLoading(true);
+    try {
+      const result = await reviewCode(code, 'User code submission', userLevel || 'beginner');
+      setCodeFeedback(result.feedback || []);
+
+      // Add code review to chat
+      const codeMessage = { role: 'user', content: `\`\`\`\n${code}\n\`\`\`` };
+      const feedbackText = result.feedback?.map(f => `**${f.type?.toUpperCase()}:** ${f.message}`).join('\n\n') || 'Great job!';
+      const reviewMessage = { role: 'assistant', content: `**[CODE REVIEW]**\n\n${feedbackText}` };
+
+      setMessages(prev => [...prev, codeMessage, reviewMessage]);
+    } catch (error) {
+      setCodeFeedback([{ type: 'error', message: error.message }]);
+    }
+    setIsLoading(false);
+  }, [userLevel]);
+
   const handleSend = useCallback(async (content) => {
     if (!content.trim() || isLoading) return;
 
-    // Create conversation if none exists
     let currentConvId = activeConversationId;
     if (!currentConvId) {
       const newConv = {
@@ -46,12 +77,10 @@ function App() {
       setActiveConversationId(currentConvId);
     }
 
-    // Add user message
     const userMessage = { role: 'user', content };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
-    // Update conversation title if first message
     if (messages.length === 0) {
       setConversations(prev =>
         prev.map(c =>
@@ -69,8 +98,17 @@ function App() {
       await sendMessageStream(
         content,
         messages,
+        userLevel,
         (chunk) => {
           assistantContent += chunk;
+
+          // Check for playground trigger
+          if (assistantContent.includes('show_playground": true') ||
+            assistantContent.includes('[NEAR-SOLUTION]') ||
+            assistantContent.includes('[NEAR_SOLUTION]')) {
+            setShowPlayground(true);
+          }
+
           setMessages(prev => {
             const updated = [...prev];
             const lastIdx = updated.length - 1;
@@ -84,6 +122,7 @@ function App() {
         },
         () => {
           setIsLoading(false);
+          setCurrentStep(prev => prev + 1);
           setConversations(prev =>
             prev.map(c =>
               c.id === currentConvId
@@ -101,7 +140,7 @@ function App() {
       setIsLoading(false);
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${error.message}` }]);
     }
-  }, [messages, isLoading, activeConversationId]);
+  }, [messages, isLoading, activeConversationId, userLevel]);
 
   return (
     <div className="flex h-screen bg-[#212121]">
@@ -111,20 +150,49 @@ function App() {
         activeId={activeConversationId}
         onNewChat={handleNewChat}
         onSelect={handleSelectConversation}
+        userLevel={userLevel}
       />
 
       {/* Main Content */}
       <div className="main-content">
         {/* Header */}
         <header className="header">
-          <h1 className="header-title">ChatGPT</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="header-title">Cortana</h1>
+            <span className="text-xs text-[#8e8e8e]">Socratic Teaching Assistant</span>
+          </div>
+          {userLevel && (
+            <div className={`level-indicator level-${userLevel}`}>
+              {userLevel.charAt(0).toUpperCase() + userLevel.slice(1)} • Step {currentStep}
+            </div>
+          )}
         </header>
 
-        {/* Chat Area */}
-        <ChatWindow messages={messages} isLoading={isLoading} />
+        {/* Main Area with Chat and Playground */}
+        <div className="content-area">
+          {/* Chat Area */}
+          <div className={`chat-section ${showPlayground ? 'with-playground' : ''}`}>
+            <ChatWindow
+              messages={messages}
+              isLoading={isLoading}
+              onLevelSelect={handleLevelSelect}
+              userLevel={userLevel}
+            />
+            <MessageInput onSend={handleSend} disabled={isLoading} />
+          </div>
 
-        {/* Input Area */}
-        <MessageInput onSend={handleSend} disabled={isLoading} />
+          {/* Coding Playground */}
+          {showPlayground && (
+            <div className="playground-section">
+              <CodePlayground
+                onSubmit={handleCodeSubmit}
+                feedback={codeFeedback}
+                disabled={isLoading}
+                level={userLevel}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

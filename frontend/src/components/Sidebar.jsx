@@ -3,6 +3,27 @@ import React from 'react';
 export default function Sidebar({ conversations, activeId, onNewChat, onSelect }) {
   return (
     <aside className="sidebar">
+      {/* Logo */}
+      <div className="px-4 py-3 border-b border-[#424242]">
+        <div className="flex items-center gap-2">
+          <div style={{
+            width: 28,
+            height: 28,
+            background: 'linear-gradient(135deg, #00bcf2, #0078d4)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="white" strokeWidth="2" />
+              <circle cx="12" cy="12" r="4" fill="white" />
+            </svg>
+          </div>
+          <span className="font-semibold text-white">Cortana</span>
+        </div>
+      </div>
+
       {/* New Chat Button */}
       <div className="sidebar-header">
         <button onClick={onNewChat} className="new-chat-btn">

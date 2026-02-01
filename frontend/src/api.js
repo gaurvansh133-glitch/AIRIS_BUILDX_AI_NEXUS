@@ -1,20 +1,15 @@
 /**
- * API client for chat functionality
+ * API Client for Cortana Teaching Assistant
  */
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE = 'http://localhost:8000';
 
 /**
- * Send a chat message and stream the response
- * @param {string} message - The user's message
- * @param {Array} history - Previous conversation messages
- * @param {function} onChunk - Callback for each streamed chunk
- * @param {function} onComplete - Callback when streaming is complete
- * @param {function} onError - Callback for errors
+ * Send message with streaming and level context
  */
-export async function sendMessageStream(message, history, onChunk, onComplete, onError) {
+export async function sendMessageStream(message, history = [], userLevel = null, onChunk, onComplete, onError) {
   try {
-    const response = await fetch(`${API_BASE_URL}/chat`, {
+    const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -25,7 +20,8 @@ export async function sendMessageStream(message, history, onChunk, onComplete, o
           role: msg.role,
           content: msg.content
         })),
-        stream: true
+        stream: true,
+        user_level: userLevel
       }),
     });
 
@@ -38,14 +34,10 @@ export async function sendMessageStream(message, history, onChunk, onComplete, o
 
     while (true) {
       const { done, value } = await reader.read();
+      if (done) break;
 
-      if (done) {
-        onComplete();
-        break;
-      }
-
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+      const text = decoder.decode(value);
+      const lines = text.split('\n');
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
@@ -56,59 +48,80 @@ export async function sendMessageStream(message, history, onChunk, onComplete, o
             }
             if (data.done) {
               onComplete();
+              return;
             }
             if (data.error) {
               onError(data.error);
+              return;
             }
           } catch (e) {
-            // Ignore parse errors for incomplete chunks
+            // Skip malformed JSON
           }
         }
       }
     }
+
+    onComplete();
   } catch (error) {
     onError(error.message);
   }
 }
 
 /**
- * Send a chat message and get a complete response (non-streaming)
- * @param {string} message - The user's message
- * @param {Array} history - Previous conversation messages
- * @returns {Promise<string>} The assistant's response
+ * Submit code for review
  */
-export async function sendMessage(message, history) {
-  const response = await fetch(`${API_BASE_URL}/chat/sync`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message,
-      history: history.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      stream: false
-    }),
-  });
+export async function reviewCode(code, context = '', userLevel = 'beginner') {
+  try {
+    const response = await fetch(`${API_BASE}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code,
+        context,
+        user_level: userLevel
+      }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    return {
+      phase: 'CODE_REVIEW',
+      feedback: [
+        { type: 'error', message: `Review failed: ${error.message}` }
+      ]
+    };
   }
+}
 
-  const data = await response.json();
-  return data.response;
+/**
+ * Get available levels
+ */
+export async function getLevels() {
+  try {
+    const response = await fetch(`${API_BASE}/levels`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    return { levels: [] };
+  }
 }
 
 /**
  * Check API health
- * @returns {Promise<object>} Health status
  */
 export async function checkHealth() {
-  const response = await fetch(`${API_BASE_URL}/health`);
-  if (!response.ok) {
-    throw new Error('API is not healthy');
+  try {
+    const response = await fetch(`${API_BASE}/health`);
+    return await response.json();
+  } catch (error) {
+    return { status: 'error', message: error.message };
   }
-  return response.json();
 }
