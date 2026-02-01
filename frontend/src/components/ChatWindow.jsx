@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import LevelSelector from './LevelSelector';
+import DiagnosticCard from './DiagnosticCard';
 
-export default function ChatWindow({ messages, isLoading, onLevelSelect, userLevel }) {
+export default function ChatWindow({ messages, isLoading, onLevelSelect, userLevel, onSend }) {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -34,35 +35,6 @@ export default function ChatWindow({ messages, isLoading, onLevelSelect, userLev
       </div>
       <p className="phase-prompt">{data.prompt}</p>
       <LevelSelector onSelect={onLevelSelect} selectedLevel={userLevel} />
-    </div>
-  );
-
-  // Render diagnostic phase
-  const renderDiagnostic = (data) => (
-    <div className="diagnostic-container">
-      <div className="phase-header">
-        <span className="phase-badge diagnostic">{data.level?.toUpperCase() || 'DIAGNOSTIC'}</span>
-        <span className="phase-title">{data.title}</span>
-      </div>
-      <p className="phase-message">{data.message}</p>
-      <div className="questions-list">
-        {data.questions?.map((q, idx) => (
-          <div key={q.id} className="question-card">
-            <div className="question-number">D{idx + 1}</div>
-            <div className="question-content">
-              <p className="question-text">{q.text}</p>
-              <div className="options-list">
-                {q.options?.map(opt => (
-                  <div key={opt.key} className="option-item">
-                    <span className="option-key">{opt.key}</span>
-                    <span className="option-text">{opt.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 
@@ -102,6 +74,21 @@ export default function ChatWindow({ messages, isLoading, onLevelSelect, userLev
     </div>
   );
 
+  // Render text diagnostic result phase
+  const renderTextDiagnosticResult = (data) => (
+    <div className="diagnostic-container">
+      <div className="phase-header">
+        <span className="phase-badge diagnostic">LEVEL DETECTED</span>
+      </div>
+      <div className="feedback-item feedback-improvement">
+        <span className="feedback-type">SUCCESS</span>
+        <span className="feedback-message">
+          Teaching level set to <strong>{data.level?.toUpperCase()}</strong>
+        </span>
+      </div>
+    </div>
+  );
+
   // Welcome screen
   if (messages.length === 0 && !isLoading) {
     return (
@@ -126,19 +113,19 @@ export default function ChatWindow({ messages, isLoading, onLevelSelect, userLev
           </p>
 
           <div className="suggestions">
-            <div className="suggestion-card">
+            <div className="suggestion-card" onClick={() => onSend("I want to learn a concept")}>
               <div className="suggestion-title">📚 Learn a concept</div>
               <div className="suggestion-desc">Adaptive difficulty based on your level</div>
             </div>
-            <div className="suggestion-card">
+            <div className="suggestion-card" onClick={() => onSend("Give me a problem to solve")}>
               <div className="suggestion-title">🧩 Solve a problem</div>
               <div className="suggestion-desc">Guided step-by-step discovery</div>
             </div>
-            <div className="suggestion-card">
+            <div className="suggestion-card" onClick={() => onSend("I want to write some code in the playground")}>
               <div className="suggestion-title">💻 Write code</div>
               <div className="suggestion-desc">Use the playground, I'll review</div>
             </div>
-            <div className="suggestion-card">
+            <div className="suggestion-card" onClick={() => onSend("Quiz me on my skills")}>
               <div className="suggestion-title">🎯 Practice skills</div>
               <div className="suggestion-desc">Quizzes and fill-in-the-blank</div>
             </div>
@@ -168,9 +155,10 @@ export default function ChatWindow({ messages, isLoading, onLevelSelect, userLev
                 </div>
                 <div className="message-text">
                   {json?.phase === 'LEVEL_SELECT' && renderLevelSelect(json)}
-                  {json?.phase === 'DIAGNOSTIC' && renderDiagnostic(json)}
+                  {json?.phase === 'DIAGNOSTIC' && <DiagnosticCard data={json} onSend={onSend} />}
                   {json?.phase === 'QUIZ' && renderQuiz(json)}
                   {json?.phase === 'CODE_REVIEW' && renderCodeReview(json)}
+                  {json?.phase === 'TEXT_DIAGNOSTIC_RESULT' && renderTextDiagnosticResult(json)}
                   <ReactMarkdown>{text}</ReactMarkdown>
                 </div>
               </div>

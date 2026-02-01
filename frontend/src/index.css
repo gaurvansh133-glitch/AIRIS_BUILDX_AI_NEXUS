@@ -601,6 +601,44 @@ body {
   line-height: 1.4;
 }
 
+.option-item.selected {
+  border-color: #00bcf2;
+  background: rgba(0, 188, 242, 0.15);
+}
+
+.option-item.selected .option-key {
+  background: #00bcf2;
+  color: white;
+}
+
+.option-item.disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.diagnostic-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.submit-diagnostic-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #00bcf2, #0078d4);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.submit-diagnostic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
 .assessment-instruction {
   margin-top: 20px;
   padding-top: 16px;

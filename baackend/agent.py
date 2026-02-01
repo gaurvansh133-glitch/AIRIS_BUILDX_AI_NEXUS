@@ -261,6 +261,43 @@ Respond with ONLY the JSON array, no other text."""
             return result["messages"][-1].content
         return "I couldn't generate a response. Please try again."
     
+    def evaluate_text_diagnostic(self, message: str) -> dict:
+        """Evaluate text-based diagnostic answers (D1: A, D2: B)."""
+        # Extract answers
+        answers = re.findall(r'[Dd]\d\s*:\s*([ABCabc])', message)
+        
+        if not answers:
+            return None
+        
+        # Count frequencies
+        counts = {'A': 0, 'B': 0, 'C': 0}
+        for ans in answers:
+            counts[ans.upper()] += 1
+        
+        # Determine level based on rules
+        # If most A -> Advanced
+        if counts['A'] > counts['B'] and counts['A'] > counts['C']:
+            level = "advanced"
+        # If most B -> Intermediate
+        elif counts['B'] > counts['A'] and counts['B'] > counts['C']:
+            level = "intermediate"
+        # If most C -> Beginner
+        elif counts['C'] > counts['A'] and counts['C'] > counts['B']:
+            level = "beginner"
+        else:
+            # Mixed/Tie -> Choose lower confidence
+            if counts['C'] > 0: level = "beginner"
+            elif counts['B'] > 0: level = "intermediate"
+            else: level = "advanced"
+            
+        level_info = self.LEVELS[level]
+        
+        return {
+            "phase": "TEXT_DIAGNOSTIC_RESULT",
+            "level": level,
+            "message": f"Based on your answers, I've set the teaching level to **{level_info['name']}**.\n\n{level_info['description']}.\n\nLet's start learning step-by-step."
+        }
+
     async def chat_stream(self, message: str, history: list[dict] = None, user_level: str = None):
         """Stream a response with level-aware structured output."""
         messages = [SystemMessage(content=self.system_prompt)]
@@ -276,8 +313,50 @@ Respond with ONLY the JSON array, no other text."""
         is_educational = self._detect_educational_query(message)
         has_code = self._detect_code_submission(message)
         
+        # Handle text-based diagnostic (D1: A, D2: B)
+        text_diag = self.evaluate_text_diagnostic(message)
+        if text_diag:
+            yield "<!--JSON_START-->\n"
+            yield json.dumps(text_diag, indent=2)
+            yield "\n<!--JSON_END-->\n\n"
+            yield text_diag["message"]
+            
+            # Continue to teaching immediately
+            user_level = text_diag["level"]
+            level_info = self.LEVELS[user_level]
+            
+            # Inject a prompt to force teaching start
+            # Try to find topic from history
+            topic_context = "current topic"
+            if history:
+                # Naive attempt to find the first user message which usually contains the question
+                for msg in history:
+                    if msg["role"] == "user":
+                        topic_context = msg["content"]
+                        break
+            
+            force_prompt = f"""The user has completed the diagnostic assessment. 
+detected_level: {user_level} ({level_info['name']})
+topic_request: {topic_context}
+
+INSTRUCTION: Start teaching {topic_context} step-by-step for a {level_info['name']} learner.
+- Step 1: Explain the core concept of {topic_context}.
+- YOU MUST WRITE THE ACTUAL EXPLANATION. DO NOT USE PLACEHOLDERS.
+- DEFINE {topic_context}.
+- give a real world analogy.
+- End with a check for understanding.
+
+GENERATE THE LESSON CONTENT NOW.
+"""
+            # Replace the "D1: ..." message with our directive for the LLM
+            messages.append(HumanMessage(content=force_prompt))
+            async for chunk in self.llm.astream(messages):
+                if chunk.content:
+                    yield chunk.content
+            return
+
         # Handle code submission
-        if has_code:
+        elif has_code:
             yield "<!--JSON_START-->\n"
             # Extract code from message
             code_match = re.search(r'```[\w]*\n?([\s\S]*?)```', message)
@@ -292,7 +371,7 @@ Respond with ONLY the JSON array, no other text."""
             return
         
         # New educational query - start with level selection
-        if is_new and is_educational:
+        elif is_new and is_educational:
             topic = message.lower().replace("how do i ", "").replace("implement ", "").replace("?", "").strip()
             
             yield "<!--JSON_START-->\n"
@@ -310,11 +389,11 @@ Respond with ONLY the JSON array, no other text."""
         level_keywords = ["beginner", "intermediate", "advanced"]
         selected_level = None
         for kw in level_keywords:
-            if kw in message.lower():
+            if kw in message.lower() and not text_diag: # Avoid re-triggering if diagnosed
                 selected_level = kw
                 break
         
-        if selected_level:
+        if selected_level and not text_diag:
             # User selected level - show diagnostic
             level_info = self.LEVELS[selected_level]
             yield "<!--JSON_START-->\n"

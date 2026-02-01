@@ -177,6 +177,7 @@ function App() {
               isLoading={isLoading}
               onLevelSelect={handleLevelSelect}
               userLevel={userLevel}
+              onSend={handleSend}
             />
             <MessageInput onSend={handleSend} disabled={isLoading} />
           </div>

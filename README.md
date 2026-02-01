@@ -16,6 +16,7 @@ Cortana detects your knowledge level and adapts its teaching style:
 - **No Direct Solutions**: Cortana refuses to write final code or give answers.
 - **Step-by-Step Guidance**: breaks complex problems into manageable logical steps.
 - **Diagnostic Phase**: Always starts with an assessment to verify your level.
+- **Text-Based Fallback**: If UI is unavailable, you can manually type diagnostics (e.g., `D1: A, D2: B`) to set your level.
 - **Mini-Quizzes**: Checks understanding before moving to the next concept.
 
 ### 💻 Collaborative Coding Playground
